@@ -1,19 +1,25 @@
-# Ralph Ultimate v3 🤖
+# Ralph Ultimate v4 🤖
 
-> Autonomous AI coding loop with Playwright verification for Claude Code
+> Autonomous AI coding loop with **AI Flow Testing** + **Chrome DevTools Logs** for Claude Code
 
-**Ralph Ultimate** is a terminal-based autonomous development system that works with Claude Code to execute complex features while you sleep. It verifies every step with Playwright (build + screenshot + console errors) and auto-fixes issues.
+**Ralph Ultimate** is a terminal-based autonomous development system that works with Claude Code to execute complex features while you sleep. It verifies every step with Playwright (build + screenshot + console errors + **AI flow testing** + **performance metrics**) and auto-fixes issues.
 
 ## ✨ Features
 
-| Feature | Description |
-|---------|-------------|
-| **Unlimited Duration** | No 2-3h session limits - runs as long as needed |
-| **Auto-Resume** | Automatically resumes after Claude's 5h API limit |
-| **Checkpoints** | Saves state, can resume after crash/reboot |
-| **Playwright Verification** | Proves work is done with screenshots + console checks |
-| **Auto-Fix** | On failure → asks Claude to fix → re-verifies (max 3x) |
-| **Circuit Breaker** | Detects infinite loops, prevents token waste |
+| Feature | v4 | Description |
+|---------|:--:|-------------|
+| **Unlimited Duration** | ✓ | No 2-3h session limits - runs as long as needed |
+| **Auto-Resume** | ✓ | Automatically resumes after Claude's 5h API limit |
+| **Checkpoints** | ✓ | Saves state, can resume after crash/reboot |
+| **Playwright Verification** | ✓ | Proves work is done with screenshots + console checks |
+| **Auto-Fix** | ✓ | On failure → asks Claude to fix → re-verifies (max 3x) |
+| **Circuit Breaker** | ✓ | Detects infinite loops, prevents token waste |
+| **AI Flow Testing** | ⭐ NEW | Simulates user interactions (click, type, navigate, assert) |
+| **Chrome DevTools Logs** | ⭐ NEW | Captures network, console, performance metrics |
+| **Web Vitals** | ⭐ NEW | LCP, CLS, FCP, TTFB with quality grades |
+| **HTML Reports** | ⭐ NEW | Visual summary with screenshots, videos, timeline |
+| **JSON Output Mode** | ⭐ NEW | For Claude Code background task integration |
+| **Video Recording** | ⭐ NEW | Records video of flow tests |
 
 ## 🚀 Quick Start
 
@@ -27,11 +33,7 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/anthropics/claude-code.git
-cd claude-code/ralph-ultimate
-
-# Or directly
-git clone https://github.com/DafnckStudio/ralph-ultimate.git ~/.ralph-ultimate
+git clone https://github.com/agentik-os/ralph-ultimate.git ~/.ralph-ultimate
 
 # Make executable
 chmod +x ~/.ralph-ultimate/ralph-ultimate.sh
@@ -51,9 +53,9 @@ ralph-init
 ```
 
 This creates:
-- `prd.json` - Your tasks/user stories
+- `prd.json` - Your tasks/user stories with test scenarios
 - `prompt.md` - Instructions for Claude
-- `.claude/` - Checkpoints and logs
+- `.claude/` - Checkpoints, logs, screenshots, videos
 
 ## 📖 Usage
 
@@ -69,11 +71,30 @@ ralph-ultimate
 # Check status
 ralph-ultimate --status
 
+# Generate HTML report only
+ralph-ultimate --report
+
 # Show checkpoints
 ralph-ultimate --show-checkpoints
 
 # Reset circuit breaker if stuck
 ralph-ultimate --reset-circuit
+```
+
+### v4 Options
+
+```bash
+# Disable AI flow testing
+ralph-ultimate --no-flow-test
+
+# Disable Chrome DevTools logging
+ralph-ultimate --no-devtools
+
+# Disable HTML report generation
+ralph-ultimate --no-report
+
+# Enable JSON output (for Claude Code background tasks)
+ralph-ultimate --json-output
 ```
 
 ### Verification Options
@@ -97,7 +118,7 @@ ralph-ultimate --verify-retries 5
 ralph-ultimate --dev-url http://localhost:3000
 ```
 
-## 🔄 Workflow
+## 🔄 v4 Workflow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -108,12 +129,12 @@ ralph-ultimate --dev-url http://localhost:3000
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      PRD GENERATION                          │
-│              Creates prd.json with user stories              │
+│         Creates prd.json with user stories + testScenarios   │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    RALPH ULTIMATE LOOP                       │
+│                    RALPH ULTIMATE v4 LOOP                    │
 │                                                              │
 │   For EACH user story:                                       │
 │   ┌──────────────────────────────────────────────────────┐  │
@@ -121,16 +142,18 @@ ralph-ultimate --dev-url http://localhost:3000
 │   │ 2. npm run build → Check passes                      │  │
 │   │ 3. Playwright screenshot → Visual verification       │  │
 │   │ 4. Console errors → No JS errors                     │  │
-│   │ 5. If FAIL → Claude fixes → Re-verify (max 3x)       │  │
-│   │ 6. If OK → Mark task complete, commit, next          │  │
+│   │ 5. ⭐ AI Flow Test → Simulate user interactions      │  │
+│   │ 6. ⭐ Chrome DevTools → Network, perf, errors        │  │
+│   │ 7. If FAIL → Claude fixes → Re-verify (max 3x)       │  │
+│   │ 8. If OK → Mark task complete, commit, next          │  │
 │   └──────────────────────────────────────────────────────┘  │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                      FINAL REPORT                            │
-│         All tasks done, screenshots saved, git pushed        │
+│                    ⭐ HTML REPORT                            │
+│   Screenshots • Videos • Performance Metrics • Timeline      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -138,7 +161,7 @@ ralph-ultimate --dev-url http://localhost:3000
 
 ```
 .ralph-ultimate/
-├── ralph-ultimate.sh      # Main script (v3 with Playwright)
+├── ralph-ultimate.sh      # Main script (v4)
 ├── ralph-init.sh          # Project initializer
 ├── ralph-unified.sh       # Unified orchestrator
 ├── lib/
@@ -146,14 +169,17 @@ ralph-ultimate --dev-url http://localhost:3000
 │   ├── checkpoint.sh      # State management
 │   └── ...
 ├── verify/
-│   └── ralph-verify.sh    # Playwright verification script
+│   ├── ralph-verify.sh    # Basic verification script
+│   ├── flow-test.js       # ⭐ AI Flow Testing (v4)
+│   ├── chrome-devtools.js # ⭐ DevTools capture (v4)
+│   └── generate-report.js # ⭐ HTML report generator (v4)
 ├── templates/
 │   ├── prd.json           # Task file template
 │   └── prompt.md          # Claude prompt template
 └── logs/                  # Execution logs
 ```
 
-## 📋 prd.json Format
+## 📋 prd.json Format (v4)
 
 ```json
 {
@@ -163,7 +189,9 @@ ralph-ultimate --dev-url http://localhost:3000
   "verification": {
     "devServerUrl": "http://localhost:3000",
     "screenshotDir": ".claude/screenshots",
-    "playwrightPath": "/home/user/.x-navigate"
+    "playwrightPath": "/home/user/.x-navigate",
+    "flowTestingEnabled": true,
+    "chromeLogs": true
   },
   "userStories": [
     {
@@ -180,6 +208,17 @@ ralph-ultimate --dev-url http://localhost:3000
         "screenshotUrl": "/dashboard",
         "checkConsole": true
       },
+      "testScenarios": [
+        {
+          "name": "User sees notification",
+          "steps": [
+            { "action": "navigate", "url": "/dashboard" },
+            { "action": "waitFor", "selector": ".notification" },
+            { "action": "assert", "selector": ".notification", "visible": true },
+            { "action": "screenshot", "name": "notification-visible" }
+          ]
+        }
+      ],
       "priority": 1,
       "status": "pending",
       "passes": false
@@ -187,6 +226,55 @@ ralph-ultimate --dev-url http://localhost:3000
   ]
 }
 ```
+
+## 🎬 AI Flow Testing Actions
+
+| Action | Parameters | Description |
+|--------|------------|-------------|
+| `navigate` | `url` | Navigate to URL |
+| `click` | `selector` | Click element |
+| `doubleClick` | `selector` | Double click element |
+| `type` | `selector`, `text`, `delay?` | Type text with optional delay |
+| `fill` | `selector`, `value` | Clear and fill input |
+| `press` | `key` | Press keyboard key (Enter, Tab, etc.) |
+| `waitFor` | `selector`, `timeout?`, `state?` | Wait for element |
+| `waitForNavigation` | `timeout?` | Wait for navigation |
+| `waitForURL` | `url`, `timeout?` | Wait for specific URL |
+| `assert` | `selector`, `contains?`, `visible?`, `count?`, `value?` | Assert conditions |
+| `screenshot` | `name`, `fullPage?` | Take named screenshot |
+| `scroll` | `selector?`, `direction?`, `position?` | Scroll page |
+| `hover` | `selector` | Hover over element |
+| `select` | `selector`, `value` | Select dropdown option |
+| `check` / `uncheck` | `selector` | Toggle checkbox |
+| `focus` / `blur` | `selector` | Focus/blur element |
+| `upload` | `selector`, `files` | Upload files |
+| `drag` | `source`, `target` | Drag and drop |
+| `wait` | `duration` | Wait N milliseconds |
+| `evaluate` | `script` | Run JavaScript |
+| `reload` | - | Reload page |
+| `goBack` / `goForward` | - | Navigate history |
+
+## 📊 Chrome DevTools Logs
+
+Ralph captures:
+
+| Type | Data |
+|------|------|
+| **Console** | All console.log, warn, error with location |
+| **Network** | Requests (URL, method, status, duration, size) |
+| **Failed Requests** | Status >= 400 or failed requests |
+| **Slow Requests** | Duration > 3 seconds |
+| **Performance** | Navigation timing (DNS, TCP, TTFB, etc.) |
+| **Web Vitals** | LCP, FCP, CLS with quality grades |
+| **Resources** | Resource breakdown (size, type, duration) |
+
+### Quality Grades
+
+| Metric | Good | Needs Improvement | Poor |
+|--------|------|-------------------|------|
+| **TTFB** | < 200ms | 200-500ms | > 500ms |
+| **LCP** | < 2.5s | 2.5-4s | > 4s |
+| **CLS** | < 0.1 | 0.1-0.25 | > 0.25 |
 
 ## 🛡️ Safety Features
 
@@ -211,18 +299,10 @@ Every step must pass:
 1. **Build Check** - `npm run build` must succeed
 2. **Screenshot** - Playwright captures the page
 3. **Console Errors** - No JavaScript errors allowed
-4. **Server Logs** - (Optional) Check for backend errors
+4. **AI Flow Tests** - User interaction simulation
+5. **DevTools Logs** - Performance metrics check
 
 ## 🔧 Configuration
-
-### Environment Variables
-
-```bash
-# In your project's .env or export
-RALPH_MAX_LOOPS=50              # Max iterations
-RALPH_VERIFY_RETRIES=3          # Retries per step
-RALPH_DEV_URL=http://localhost:3000
-```
 
 ### Per-Project Config
 
@@ -236,6 +316,12 @@ VERIFY_SCREENSHOT=true
 VERIFY_CONSOLE=true
 VERIFY_LOGS=false
 DEV_SERVER_URL=http://localhost:3000
+
+# v4 Options
+FLOW_TESTING_ENABLED=true
+DEVTOOLS_LOGS_ENABLED=true
+REPORT_ENABLED=true
+JSON_OUTPUT=false
 ```
 
 ## 🎯 Best Practices
@@ -245,6 +331,7 @@ DEV_SERVER_URL=http://localhost:3000
 - Let it run overnight for big features
 - Keep tasks atomic (1 task = 1 iteration)
 - Include "Build passes" in acceptance criteria
+- Add `testScenarios` for UI features
 
 ### DON'T ❌
 - Use for critical production bugs (need human diagnosis)
@@ -265,19 +352,26 @@ Shows:
 - Verification status
 - Recent logs
 
-### Check Status
+### JSON Output Mode (for Claude Code)
 ```bash
-ralph-ultimate --status
+ralph-ultimate --json-output
 ```
+
+Outputs structured JSON status for background task integration.
 
 ### View Logs
 ```bash
 tail -f ~/.ralph-ultimate/logs/ralph-ultimate.log
 ```
 
+### View DevTools Logs
+```bash
+cat .claude/logs/devtools-*.json | jq .
+```
+
 ## 🤝 Integration with Claude Code
 
-### Using /ralph Skill
+### Using /ralph Skill (v4)
 
 If you have the `/ralph` skill installed:
 
@@ -286,7 +380,15 @@ If you have the `/ralph` skill installed:
 /ralph status
 /ralph verify http://localhost:3000
 /ralph resume
+/ralph report
 ```
+
+### Background Task Integration
+
+The `/ralph` skill can now launch Ralph as a background task from Claude Code:
+- No need to manually run terminal commands
+- Use `/ralph status` to check progress
+- JSON output mode for structured status
 
 ## 📝 License
 
@@ -294,7 +396,7 @@ MIT License - Use it, modify it, share it!
 
 ## 🙏 Credits
 
-Created by [DafnckStudio](https://github.com/DafnckStudio) for the Claude Code ecosystem.
+Created by [AgentikOS](https://github.com/agentik-os) for the Claude Code ecosystem.
 
 Built on top of:
 - [Claude Code](https://claude.ai/code) by Anthropic

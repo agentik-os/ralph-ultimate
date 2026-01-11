@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # ╔═══════════════════════════════════════════════════════════════════════════════╗
-# ║                           RALPH ULTIMATE v3                                    ║
+# ║                           RALPH ULTIMATE v4                                    ║
 # ║         Full Autonomous AI Development Loop - ZERO LIMITS                      ║
 # ║                                                                                ║
 # ║  Based on: frankbria/ralph-claude-code + DafnckStudio Ralph                   ║
 # ║  Author: Gareth (DafnckStudio)                                                ║
-# ║  v3: + Playwright Verification (Build + Screenshot + Console + Logs)          ║
+# ║  v4: + AI Flow Testing + Chrome DevTools Logs + HTML Report                   ║
 # ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 set -e
@@ -44,7 +44,7 @@ VERBOSE_PROGRESS=true
 USE_TMUX=false
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# v3: PLAYWRIGHT VERIFICATION
+# v4: PLAYWRIGHT VERIFICATION + AI FLOW TESTING + CHROME DEVTOOLS
 # ═══════════════════════════════════════════════════════════════════════════════
 
 VERIFY_ENABLED=true                # Enable Playwright verification after each step
@@ -56,6 +56,21 @@ VERIFY_MAX_RETRIES=3               # Max retries per step if verification fails
 DEV_SERVER_URL=""                  # Auto-detected or from prd.json
 PLAYWRIGHT_PATH="/home/hacker/.x-navigate"
 VERIFY_SCRIPT="$SCRIPT_DIR/verify/ralph-verify.sh"
+
+# v4: AI Flow Testing
+FLOW_TESTING_ENABLED=true          # Enable AI flow testing (simulate user actions)
+FLOW_TEST_SCRIPT="$SCRIPT_DIR/verify/flow-test.js"
+
+# v4: Chrome DevTools Logs
+DEVTOOLS_LOGS_ENABLED=true         # Capture network, performance, errors
+DEVTOOLS_SCRIPT="$SCRIPT_DIR/verify/chrome-devtools.js"
+
+# v4: HTML Report
+REPORT_ENABLED=true                # Generate HTML report at the end
+REPORT_SCRIPT="$SCRIPT_DIR/verify/generate-report.js"
+
+# v4: JSON Output (for background task integration)
+JSON_OUTPUT=false                  # Output JSON status for Claude Code integration
 
 # Loop Control
 MAX_ITERATIONS=999999
@@ -156,9 +171,11 @@ run_verification() {
 
     mkdir -p .claude/screenshots
     mkdir -p .claude/logs
+    mkdir -p .claude/videos
 
     local verify_opts=""
     local step_name="loop-${loop_count}"
+    local step_id=""
 
     # Get current step info
     local step_info=$(get_current_step_verification)
@@ -166,6 +183,7 @@ run_verification() {
 
     if [[ -n "$step_info" && "$step_info" != "{}" ]]; then
         step_name=$(echo "$step_info" | jq -r '.id // "step"')
+        step_id=$(echo "$step_info" | jq -r '.id // ""')
         local verification=$(echo "$step_info" | jq -r '.verification // {}')
         local verify_type=$(echo "$verification" | jq -r '.type // "build"')
 
@@ -198,33 +216,141 @@ run_verification() {
     verify_opts="$verify_opts --name \"$step_name\""
 
     # Run verification
+    local verify_passed=false
     if [[ -f "$VERIFY_SCRIPT" ]]; then
         log_status "INFO" "Running: ralph-verify.sh $verify_opts"
 
         if eval "$VERIFY_SCRIPT $verify_opts" 2>&1 | tee ".claude/logs/verify-${loop_count}.log"; then
-            log_status "SUCCESS" "✅ Verification passed"
-            return 0
+            log_status "SUCCESS" "✅ Basic verification passed"
+            verify_passed=true
         else
-            log_status "WARN" "❌ Verification failed"
-
-            if [[ $retry_count -lt $((VERIFY_MAX_RETRIES - 1)) ]]; then
-                log_status "INFO" "Will fix and retry..."
-                return 1  # Signal to fix and retry
-            else
-                log_status "ERROR" "Max retries reached for verification"
-                return 2  # Signal to stop
-            fi
+            log_status "WARN" "❌ Basic verification failed"
         fi
     else
         # Fallback: simple build check
         log_status "WARN" "Verify script not found, using simple build check"
         if npm run build > ".claude/logs/build-${loop_count}.log" 2>&1; then
             log_status "SUCCESS" "✅ Build passed"
-            return 0
+            verify_passed=true
         else
             log_status "WARN" "❌ Build failed"
-            return 1
         fi
+    fi
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # v4: AI FLOW TESTING
+    # ═══════════════════════════════════════════════════════════════════════════════
+    if [[ "$FLOW_TESTING_ENABLED" == "true" ]] && [[ "$verify_passed" == "true" ]]; then
+        run_flow_tests "$loop_count" "$step_id"
+        local flow_result=$?
+        if [[ $flow_result -ne 0 ]]; then
+            log_status "WARN" "❌ Flow tests failed"
+            verify_passed=false
+        fi
+    fi
+
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # v4: CHROME DEVTOOLS LOGS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    if [[ "$DEVTOOLS_LOGS_ENABLED" == "true" ]] && [[ -n "$DEV_SERVER_URL" ]]; then
+        run_devtools_capture "$loop_count" "$step_url"
+    fi
+
+    # Return result
+    if [[ "$verify_passed" == "true" ]]; then
+        return 0
+    else
+        if [[ $retry_count -lt $((VERIFY_MAX_RETRIES - 1)) ]]; then
+            log_status "INFO" "Will fix and retry..."
+            return 1  # Signal to fix and retry
+        else
+            log_status "ERROR" "Max retries reached for verification"
+            return 2  # Signal to stop
+        fi
+    fi
+}
+
+# ==============================================================================
+# v4: AI FLOW TESTING FUNCTIONS
+# ==============================================================================
+
+run_flow_tests() {
+    local loop_count=$1
+    local step_id=$2
+
+    if [[ ! -f "$FLOW_TEST_SCRIPT" ]]; then
+        log_status "WARN" "Flow test script not found: $FLOW_TEST_SCRIPT"
+        return 0
+    fi
+
+    # Check if current step has test scenarios
+    if [[ ! -f "prd.json" ]]; then
+        return 0
+    fi
+
+    local has_scenarios=$(jq -r --arg id "$step_id" '[.userStories[] | select(.id == $id) | .testScenarios // []] | length' prd.json 2>/dev/null || echo "0")
+
+    if [[ "$has_scenarios" == "0" ]] || [[ -z "$step_id" ]]; then
+        log_status "INFO" "No test scenarios for step $step_id, skipping flow tests"
+        return 0
+    fi
+
+    log_status "INFO" "🎬 Running AI Flow Tests for $step_id..."
+
+    # Run flow tests
+    if node "$FLOW_TEST_SCRIPT" prd.json 2>&1 | tee ".claude/logs/flow-test-${loop_count}.log"; then
+        log_status "SUCCESS" "✅ Flow tests passed"
+        return 0
+    else
+        log_status "WARN" "❌ Flow tests failed"
+        return 1
+    fi
+}
+
+# ==============================================================================
+# v4: CHROME DEVTOOLS CAPTURE
+# ==============================================================================
+
+run_devtools_capture() {
+    local loop_count=$1
+    local url=${2:-$DEV_SERVER_URL}
+
+    if [[ ! -f "$DEVTOOLS_SCRIPT" ]]; then
+        log_status "WARN" "DevTools script not found: $DEVTOOLS_SCRIPT"
+        return 0
+    fi
+
+    if [[ -z "$url" ]]; then
+        log_status "WARN" "No URL for DevTools capture"
+        return 0
+    fi
+
+    log_status "INFO" "📊 Capturing Chrome DevTools logs..."
+
+    local output_path=".claude/logs/devtools-${loop_count}.json"
+
+    if node "$DEVTOOLS_SCRIPT" "$url" "$output_path" 2>&1 | tee ".claude/logs/devtools-capture-${loop_count}.log"; then
+        # Analyze results
+        if [[ -f "$output_path" ]]; then
+            local js_errors=$(jq '.summary.jsErrors // 0' "$output_path" 2>/dev/null || echo "0")
+            local failed_requests=$(jq '.summary.failedRequests // 0' "$output_path" 2>/dev/null || echo "0")
+            local ttfb_grade=$(jq -r '.summary.grades.ttfb // "unknown"' "$output_path" 2>/dev/null || echo "unknown")
+            local lcp_grade=$(jq -r '.summary.grades.lcp // "unknown"' "$output_path" 2>/dev/null || echo "unknown")
+
+            log_status "INFO" "DevTools Summary:"
+            log_status "INFO" "  • JS Errors: $js_errors"
+            log_status "INFO" "  • Failed Requests: $failed_requests"
+            log_status "INFO" "  • TTFB: $ttfb_grade"
+            log_status "INFO" "  • LCP: $lcp_grade"
+
+            if [[ $js_errors -gt 0 ]] || [[ $failed_requests -gt 0 ]]; then
+                log_status "WARN" "⚠️ Issues detected in DevTools logs"
+            fi
+        fi
+        return 0
+    else
+        log_status "WARN" "DevTools capture failed"
+        return 1
     fi
 }
 
@@ -361,7 +487,7 @@ mkdir -p "$LOG_DIR"
 
 init_ralph_ultimate() {
     log_status "INIT" "╔═══════════════════════════════════════════════════════════╗"
-    log_status "INIT" "║           RALPH ULTIMATE v3 - PLAYWRIGHT VERIFY           ║"
+    log_status "INIT" "║           RALPH ULTIMATE v4 - AI FLOW TESTING             ║"
     log_status "INIT" "╚═══════════════════════════════════════════════════════════╝"
     log_status "INFO" ""
     log_status "INFO" "Configuration:"
@@ -376,6 +502,12 @@ init_ralph_ultimate() {
     log_status "INFO" "    - Console Errors: $VERIFY_CONSOLE"
     log_status "INFO" "    - Server Logs: $VERIFY_LOGS"
     log_status "INFO" "    - Max Retries: $VERIFY_MAX_RETRIES"
+    log_status "INFO" ""
+    log_status "INFO" "v4 Features:"
+    log_status "INFO" "  • AI Flow Testing: ${GREEN}$FLOW_TESTING_ENABLED${NC}"
+    log_status "INFO" "  • Chrome DevTools Logs: ${GREEN}$DEVTOOLS_LOGS_ENABLED${NC}"
+    log_status "INFO" "  • HTML Report: ${GREEN}$REPORT_ENABLED${NC}"
+    log_status "INFO" "  • JSON Output: ${GREEN}$JSON_OUTPUT${NC}"
     log_status "INFO" ""
 
     init_circuit_breaker
@@ -392,7 +524,78 @@ init_ralph_ultimate() {
         detect_dev_server_url
         mkdir -p .claude/screenshots
         mkdir -p .claude/logs
+        mkdir -p .claude/videos
+        mkdir -p .claude/reports
     fi
+}
+
+# ==============================================================================
+# v4: HTML REPORT GENERATION
+# ==============================================================================
+
+generate_html_report() {
+    if [[ "$REPORT_ENABLED" != "true" ]]; then
+        return 0
+    fi
+
+    if [[ ! -f "$REPORT_SCRIPT" ]]; then
+        log_status "WARN" "Report script not found: $REPORT_SCRIPT"
+        return 1
+    fi
+
+    log_status "INFO" "📊 Generating HTML report..."
+
+    local report_path=".claude/reports/ralph-report-$(date +%Y%m%d-%H%M%S).html"
+
+    if node "$REPORT_SCRIPT" "prd.json" "$report_path" 2>&1; then
+        log_status "SUCCESS" "✅ Report generated: $report_path"
+        return 0
+    else
+        log_status "WARN" "Report generation failed"
+        return 1
+    fi
+}
+
+# ==============================================================================
+# v4: JSON STATUS OUTPUT (for Claude Code background task integration)
+# ==============================================================================
+
+output_json_status() {
+    local loop_count=$1
+    local status=$2
+    local message=$3
+
+    if [[ "$JSON_OUTPUT" != "true" ]]; then
+        return 0
+    fi
+
+    local total_tasks=0
+    local completed_tasks=0
+    local current_task=""
+
+    if [[ -f "prd.json" ]]; then
+        total_tasks=$(jq '[.userStories[]] | length' prd.json 2>/dev/null || echo "0")
+        completed_tasks=$(jq '[.userStories[] | select(.passes == true)] | length' prd.json 2>/dev/null || echo "0")
+        current_task=$(jq -r '[.userStories[] | select(.passes != true)][0].title // "None"' prd.json 2>/dev/null || echo "Unknown")
+    fi
+
+    cat << EOF
+{
+    "type": "ralph_status",
+    "timestamp": "$(date -Iseconds)",
+    "loop": $loop_count,
+    "status": "$status",
+    "message": "$message",
+    "progress": {
+        "total": $total_tasks,
+        "completed": $completed_tasks,
+        "percentage": $(( total_tasks > 0 ? (completed_tasks * 100 / total_tasks) : 0 ))
+    },
+    "currentTask": "$current_task",
+    "lastScreenshot": "$(ls -t .claude/screenshots/*.png 2>/dev/null | head -1)",
+    "lastDevTools": "$(ls -t .claude/logs/devtools-*.json 2>/dev/null | head -1)"
+}
+EOF
 }
 
 detect_project_type() {
@@ -780,6 +983,9 @@ main() {
         # Update status
         update_status "$loop_count" "executing" "running"
 
+        # v4: JSON status output for background task integration
+        output_json_status "$loop_count" "executing" "Starting loop $loop_count"
+
         # Execute Claude Code
         execute_claude_code "$loop_count"
         local exec_result=$?
@@ -879,13 +1085,23 @@ Focus on fixing the specific errors mentioned in the logs."
         log_status "INFO" ""
     done
 
+    # v4: Generate HTML report at session end
+    generate_html_report
+
     log_status "INFO" "═══════════════════════════════════════════════════════════"
-    log_status "INFO" "          RALPH ULTIMATE v3 SESSION ENDED"
+    log_status "INFO" "          RALPH ULTIMATE v4 SESSION ENDED"
     log_status "INFO" "═══════════════════════════════════════════════════════════"
     log_status "INFO" "Total loops executed: $loop_count"
     log_status "INFO" "Context resets: $context_reset_count"
     log_status "INFO" "Logs available in: $LOG_DIR/"
     log_status "INFO" "Checkpoints in: $CHECKPOINT_DIR/"
+    log_status "INFO" "Screenshots in: .claude/screenshots/"
+    log_status "INFO" "Videos in: .claude/videos/"
+    log_status "INFO" "DevTools logs in: .claude/logs/devtools-*.json"
+    log_status "INFO" "Report in: .claude/reports/"
+
+    # v4: Final JSON status
+    output_json_status "$loop_count" "completed" "Session ended"
 }
 
 # ==============================================================================
@@ -908,8 +1124,8 @@ trap cleanup SIGINT SIGTERM
 show_help() {
     cat << EOF
 ╔═══════════════════════════════════════════════════════════════════════════════╗
-║                           RALPH ULTIMATE v3                                    ║
-║         Full Autonomous AI Development Loop - PLAYWRIGHT VERIFY                ║
+║                           RALPH ULTIMATE v4                                    ║
+║     Full Autonomous AI Development Loop - AI FLOW TESTING + DEVTOOLS          ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 
 Usage: ralph-ultimate [OPTIONS]
@@ -938,19 +1154,31 @@ Verification Options (v3):
     --verify-retries N      Max verification retries (default: $VERIFY_MAX_RETRIES)
     --dev-url URL           Override dev server URL
 
-v3 New Features:
+v4 Options - AI Flow Testing & Chrome DevTools:
+    --no-flow-test          Disable AI flow testing
+    --no-devtools           Disable Chrome DevTools logging
+    --no-report             Disable HTML report generation
+    --json-output           Output JSON status (for Claude Code integration)
+    --report                Generate report only (requires prd.json)
+
+v4 New Features:
+    • AI Flow Testing - Simulate user interactions (click, type, navigate)
+    • Chrome DevTools Logs - Network, console, performance metrics
+    • Web Vitals capture - LCP, CLS, FCP, TTFB with grades
+    • HTML Report - Visual summary with screenshots, metrics, timeline
+    • JSON Output mode - For Claude Code background task integration
+    • Video recording of flow tests
+
+v3 Features:
     • Playwright verification after each step
     • Auto screenshot + console error detection
     • Build check before marking task complete
     • Auto-fix on verification failure (max $VERIFY_MAX_RETRIES retries)
-    • Visual verification via screenshots
 
-v2 Improvements:
+v2 Features:
     • Fixed "Prompt is too long" error
     • Per-project checkpoint system
     • Context reset every $CONTEXT_RESET_INTERVAL loops
-    • Minimal prompts (max $MAX_PROMPT_CHARS chars)
-    • --max-turns limit per execution
 
 EOF
 }
@@ -1050,6 +1278,32 @@ while [[ $# -gt 0 ]]; do
         --dev-url)
             DEV_SERVER_URL="$2"
             shift 2
+            ;;
+        --no-flow-test)
+            FLOW_TESTING_ENABLED=false
+            shift
+            ;;
+        --no-devtools)
+            DEVTOOLS_LOGS_ENABLED=false
+            shift
+            ;;
+        --no-report)
+            REPORT_ENABLED=false
+            shift
+            ;;
+        --json-output)
+            JSON_OUTPUT=true
+            shift
+            ;;
+        --report)
+            # Generate report only
+            if [[ -f "prd.json" ]]; then
+                generate_html_report
+            else
+                echo "Error: prd.json not found"
+                exit 1
+            fi
+            exit 0
             ;;
         *)
             echo "Unknown option: $1"
