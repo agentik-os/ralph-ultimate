@@ -1,0 +1,20 @@
+# Logs
+logs/
+*.log
+
+# Checkpoints (local state)
+.claude/checkpoints/
+
+# Screenshots (generated)
+.claude/screenshots/
+
+# Local config
+.ralph-config
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+*.tmp
+*.bak
