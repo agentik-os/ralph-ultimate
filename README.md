@@ -1,25 +1,21 @@
-# Ralph Ultimate v4 🤖
+# Ralph Ultimate 🤖
 
-> Autonomous AI coding loop with **AI Flow Testing** + **Chrome DevTools Logs** for Claude Code
+> Autonomous AI coding loop with **Unlimited Mode** + **Playwright Verification** for Claude Code
 
-**Ralph Ultimate** is a terminal-based autonomous development system that works with Claude Code to execute complex features while you sleep. It verifies every step with Playwright (build + screenshot + console errors + **AI flow testing** + **performance metrics**) and auto-fixes issues.
+**Ralph Ultimate** is a terminal-based autonomous development system that works with Claude Code to execute complex features while you sleep. It runs **without rate limits**, auto-resumes after API limits, and verifies work with Playwright screenshots.
 
 ## ✨ Features
 
-| Feature | v4 | Description |
-|---------|:--:|-------------|
-| **Unlimited Duration** | ✓ | No 2-3h session limits - runs as long as needed |
-| **Auto-Resume** | ✓ | Automatically resumes after Claude's 5h API limit |
-| **Checkpoints** | ✓ | Saves state, can resume after crash/reboot |
-| **Playwright Verification** | ✓ | Proves work is done with screenshots + console checks |
-| **Auto-Fix** | ✓ | On failure → asks Claude to fix → re-verifies (max 3x) |
-| **Circuit Breaker** | ✓ | Detects infinite loops, prevents token waste |
-| **AI Flow Testing** | ⭐ NEW | Simulates user interactions (click, type, navigate, assert) |
-| **Chrome DevTools Logs** | ⭐ NEW | Captures network, console, performance metrics |
-| **Web Vitals** | ⭐ NEW | LCP, CLS, FCP, TTFB with quality grades |
-| **HTML Reports** | ⭐ NEW | Visual summary with screenshots, videos, timeline |
-| **JSON Output Mode** | ⭐ NEW | For Claude Code background task integration |
-| **Video Recording** | ⭐ NEW | Records video of flow tests |
+| Feature | Description |
+|---------|-------------|
+| **Unlimited Mode** | No rate limiting - runs as long as needed |
+| **Auto-Resume** | Automatically resumes after Claude's 5h API limit (waits 65 min) |
+| **Circuit Breaker** | Detects infinite loops, prevents token waste |
+| **Playwright Verification** | Screenshots + console error checks after each loop |
+| **Interactive Setup** | `ralph-setup` for easy project initialization |
+| **tmux Dashboard** | `--monitor` option for visual progress tracking |
+| **Background Launch** | Can be launched by Claude Code in background |
+| **Checkpoints** | Saves state, can resume after crash/reboot |
 
 ## 🚀 Quick Start
 
@@ -33,29 +29,32 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/agentik-os/ralph-ultimate.git ~/.ralph-ultimate
+git clone https://github.com/agentik-os/ralph-ultimate.git ~/.ralph
 
-# Make executable
-chmod +x ~/.ralph-ultimate/ralph-ultimate.sh
+# Make scripts executable
+chmod +x ~/.ralph/*.sh ~/.ralph/lib/*.sh
 
 # Add to PATH (add to .bashrc/.zshrc)
-export PATH="$HOME/.ralph-ultimate:$PATH"
+export PATH="$HOME/.ralph:$PATH"
 
-# Create symlink for easy access
-sudo ln -sf ~/.ralph-ultimate/ralph-ultimate.sh /usr/local/bin/ralph-ultimate
+# Create symlinks for easy access
+sudo ln -sf ~/.ralph/ralph.sh /usr/local/bin/ralph
+sudo ln -sf ~/.ralph/ralph-setup.sh /usr/local/bin/ralph-setup
+sudo ln -sf ~/.ralph/ralph-monitor.sh /usr/local/bin/ralph-monitor
 ```
 
 ### Initialize a Project
 
 ```bash
 cd /your/project
-ralph-init
+ralph-setup
 ```
 
 This creates:
-- `prd.json` - Your tasks/user stories with test scenarios
-- `prompt.md` - Instructions for Claude
-- `.claude/` - Checkpoints, logs, screenshots, videos
+- `PROMPT.md` - Instructions for Claude
+- `@fix_plan.md` - Task list with checkboxes
+- `@AGENT.md` - Build/run/test commands
+- `logs/` - Execution logs and screenshots
 
 ## 📖 Usage
 
@@ -63,265 +62,171 @@ This creates:
 
 ```bash
 # Start autonomous loop (recommended with monitor)
-ralph-ultimate --monitor
+ralph --monitor
 
 # Start without tmux dashboard
-ralph-ultimate
+ralph
 
 # Check status
-ralph-ultimate --status
+ralph --status
 
-# Generate HTML report only
-ralph-ultimate --report
-
-# Show checkpoints
-ralph-ultimate --show-checkpoints
+# Show circuit breaker state
+ralph --circuit-status
 
 # Reset circuit breaker if stuck
-ralph-ultimate --reset-circuit
+ralph --reset-circuit
 ```
 
-### v4 Options
+### Options
 
 ```bash
-# Disable AI flow testing
-ralph-ultimate --no-flow-test
+ralph --prompt FILE       # Use alternate prompt file
+ralph --timeout 30        # Timeout in minutes (default: 15)
+ralph --verbose           # Verbose mode
 
-# Disable Chrome DevTools logging
-ralph-ultimate --no-devtools
-
-# Disable HTML report generation
-ralph-ultimate --no-report
-
-# Enable JSON output (for Claude Code background tasks)
-ralph-ultimate --json-output
+# Playwright options
+ralph --no-playwright         # Disable Playwright verification
+ralph --playwright-port 3001  # Specify dev server port
 ```
 
-### Verification Options
-
-```bash
-# Disable all verification (faster but risky)
-ralph-ultimate --no-verify
-
-# Skip specific checks
-ralph-ultimate --no-build-check     # Skip npm run build
-ralph-ultimate --no-screenshot      # Skip Playwright screenshot
-ralph-ultimate --no-console-check   # Skip console error check
-
-# Enable server logs check
-ralph-ultimate --with-logs
-
-# Set max retries on failure (default: 3)
-ralph-ultimate --verify-retries 5
-
-# Override dev server URL
-ralph-ultimate --dev-url http://localhost:3000
-```
-
-## 🔄 v4 Workflow
+## 🔄 How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    YOUR FEATURE REQUEST                      │
-│            "Add user notifications system"                   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      PRD GENERATION                          │
-│         Creates prd.json with user stories + testScenarios   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    RALPH ULTIMATE v4 LOOP                    │
+│                    RALPH UNLIMITED LOOP                      │
 │                                                              │
-│   For EACH user story:                                       │
-│   ┌──────────────────────────────────────────────────────┐  │
-│   │ 1. Claude executes the task                          │  │
-│   │ 2. npm run build → Check passes                      │  │
-│   │ 3. Playwright screenshot → Visual verification       │  │
-│   │ 4. Console errors → No JS errors                     │  │
-│   │ 5. ⭐ AI Flow Test → Simulate user interactions      │  │
-│   │ 6. ⭐ Chrome DevTools → Network, perf, errors        │  │
-│   │ 7. If FAIL → Claude fixes → Re-verify (max 3x)       │  │
-│   │ 8. If OK → Mark task complete, commit, next          │  │
-│   └──────────────────────────────────────────────────────┘  │
+│  1. Read PROMPT.md (your instructions)                      │
+│  2. Read @fix_plan.md (task list)                           │
+│  3. Launch Claude Code                                       │
+│  4. Claude works on a task                                   │
+│  5. ✨ Playwright Verification (if dev server active)       │
+│     - Screenshot of the app                                  │
+│     - Check console errors                                   │
+│  6. Check if done (exit detection)                          │
+│  7. If not done → go back to step 3                         │
+│  8. If done → STOP                                           │
 │                                                              │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    ⭐ HTML REPORT                            │
-│   Screenshots • Videos • Performance Metrics • Timeline      │
+│  🔄 Infinite loop until completion                          │
+│  ⏰ If 5h API limit → wait 65 min → resume                  │
+│  📸 Auto screenshots in logs/screenshots/                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## 📁 Project Structure
 
 ```
-.ralph-ultimate/
-├── ralph-ultimate.sh      # Main script (v4)
-├── ralph-init.sh          # Project initializer
-├── ralph-unified.sh       # Unified orchestrator
+~/.ralph/
+├── ralph.sh              # Main loop script (unlimited mode)
+├── ralph-setup.sh        # Interactive project setup
+├── ralph-monitor.sh      # tmux dashboard
+├── ralph-import.sh       # Import requirements
 ├── lib/
-│   ├── circuit-breaker.sh # Infinite loop protection
-│   ├── checkpoint.sh      # State management
-│   └── ...
-├── verify/
-│   ├── ralph-verify.sh    # Basic verification script
-│   ├── flow-test.js       # ⭐ AI Flow Testing (v4)
-│   ├── chrome-devtools.js # ⭐ DevTools capture (v4)
-│   └── generate-report.js # ⭐ HTML report generator (v4)
-├── templates/
-│   ├── prd.json           # Task file template
-│   └── prompt.md          # Claude prompt template
-└── logs/                  # Execution logs
+│   ├── circuit_breaker.sh   # Infinite loop protection
+│   ├── date_utils.sh        # Date utilities
+│   ├── response_analyzer.sh # Response analysis
+│   └── playwright_verify.sh # Playwright verification
+└── templates/            # Project templates
 ```
 
-## 📋 prd.json Format (v4)
+### Project Files Created by ralph-setup
 
-```json
-{
-  "project": "my-app",
-  "feature": "user-notifications",
-  "createdAt": "2024-01-15T10:00:00Z",
-  "verification": {
-    "devServerUrl": "http://localhost:3000",
-    "screenshotDir": ".claude/screenshots",
-    "playwrightPath": "/home/user/.x-navigate",
-    "flowTestingEnabled": true,
-    "chromeLogs": true
-  },
-  "userStories": [
-    {
-      "id": "US-001",
-      "title": "Create notification component",
-      "description": "As a user, I want to see notifications",
-      "acceptanceCriteria": [
-        "Component renders correctly",
-        "Build passes",
-        "No console errors"
-      ],
-      "verification": {
-        "type": "ui",
-        "screenshotUrl": "/dashboard",
-        "checkConsole": true
-      },
-      "testScenarios": [
-        {
-          "name": "User sees notification",
-          "steps": [
-            { "action": "navigate", "url": "/dashboard" },
-            { "action": "waitFor", "selector": ".notification" },
-            { "action": "assert", "selector": ".notification", "visible": true },
-            { "action": "screenshot", "name": "notification-visible" }
-          ]
-        }
-      ],
-      "priority": 1,
-      "status": "pending",
-      "passes": false
-    }
-  ]
-}
+```
+your-project/
+├── PROMPT.md          # 📋 Instructions for Claude (objective, context)
+├── @fix_plan.md       # ✅ Task list with checkboxes
+├── @AGENT.md          # 🔧 Build/run/test commands
+├── status.json        # 📊 Current state (generated by Ralph)
+└── logs/
+    ├── ralph.log      # 📝 Execution logs
+    └── screenshots/   # 📸 Playwright screenshots
 ```
 
-## 🎬 AI Flow Testing Actions
+## 🔧 Configuration
 
-| Action | Parameters | Description |
-|--------|------------|-------------|
-| `navigate` | `url` | Navigate to URL |
-| `click` | `selector` | Click element |
-| `doubleClick` | `selector` | Double click element |
-| `type` | `selector`, `text`, `delay?` | Type text with optional delay |
-| `fill` | `selector`, `value` | Clear and fill input |
-| `press` | `key` | Press keyboard key (Enter, Tab, etc.) |
-| `waitFor` | `selector`, `timeout?`, `state?` | Wait for element |
-| `waitForNavigation` | `timeout?` | Wait for navigation |
-| `waitForURL` | `url`, `timeout?` | Wait for specific URL |
-| `assert` | `selector`, `contains?`, `visible?`, `count?`, `value?` | Assert conditions |
-| `screenshot` | `name`, `fullPage?` | Take named screenshot |
-| `scroll` | `selector?`, `direction?`, `position?` | Scroll page |
-| `hover` | `selector` | Hover over element |
-| `select` | `selector`, `value` | Select dropdown option |
-| `check` / `uncheck` | `selector` | Toggle checkbox |
-| `focus` / `blur` | `selector` | Focus/blur element |
-| `upload` | `selector`, `files` | Upload files |
-| `drag` | `source`, `target` | Drag and drop |
-| `wait` | `duration` | Wait N milliseconds |
-| `evaluate` | `script` | Run JavaScript |
-| `reload` | - | Reload page |
-| `goBack` / `goForward` | - | Navigate history |
+### Default Settings (Unlimited Mode)
 
-## 📊 Chrome DevTools Logs
+```bash
+# No rate limiting
+RATE_LIMIT_ENABLED=false
+MAX_CALLS_PER_HOUR=999999999
 
-Ralph captures:
+# Auto-resume on 5h API limit
+AUTO_RESUME_ON_5H_LIMIT=true
+API_LIMIT_WAIT_MINUTES=65
 
-| Type | Data |
-|------|------|
-| **Console** | All console.log, warn, error with location |
-| **Network** | Requests (URL, method, status, duration, size) |
-| **Failed Requests** | Status >= 400 or failed requests |
-| **Slow Requests** | Duration > 3 seconds |
-| **Performance** | Navigation timing (DNS, TCP, TTFB, etc.) |
-| **Web Vitals** | LCP, FCP, CLS with quality grades |
-| **Resources** | Resource breakdown (size, type, duration) |
+# Playwright verification enabled
+PLAYWRIGHT_ENABLED=true
+PLAYWRIGHT_DEV_PORTS="3000 3001 5173 8080 22001 22002 33001"
+```
 
-### Quality Grades
+### Customization
 
-| Metric | Good | Needs Improvement | Poor |
-|--------|------|-------------------|------|
-| **TTFB** | < 200ms | 200-500ms | > 500ms |
-| **LCP** | < 2.5s | 2.5-4s | > 4s |
-| **CLS** | < 0.1 | 0.1-0.25 | > 0.25 |
+Create `.ralph-config` in your project to override defaults:
+
+```bash
+CLAUDE_TIMEOUT_MINUTES=20     # Claude timeout per loop
+VERBOSE_PROGRESS=true         # Verbose output
+PLAYWRIGHT_ENABLED=false      # Disable Playwright
+```
 
 ## 🛡️ Safety Features
 
 ### Circuit Breaker
+
 Detects when Ralph is stuck in a loop and stops automatically:
-- Max consecutive failures
+- Max consecutive failures detection
 - Token usage monitoring
 - Time-based limits
 
-### Checkpoints
-Automatically saves progress:
 ```bash
-# View checkpoints
-ralph-ultimate --show-checkpoints
+# Check circuit breaker status
+ralph --circuit-status
 
-# Resume from checkpoint
-ralph-ultimate  # Automatically detects and resumes
+# Reset if stuck
+ralph --reset-circuit
 ```
 
-### Verification Pipeline
-Every step must pass:
-1. **Build Check** - `npm run build` must succeed
-2. **Screenshot** - Playwright captures the page
-3. **Console Errors** - No JavaScript errors allowed
-4. **AI Flow Tests** - User interaction simulation
-5. **DevTools Logs** - Performance metrics check
+### Playwright Verification
 
-## 🔧 Configuration
+After each loop, Ralph:
+1. Detects running dev server (ports: 3000, 3001, 5173, 8080, 22001, 22002, 33001)
+2. Takes a screenshot
+3. Checks for JavaScript console errors
+4. Logs the result
 
-### Per-Project Config
+Screenshots saved as: `logs/screenshots/loop_5_20260112_143025.png`
 
-Create `.ralph-config` in your project:
+## 📊 Monitoring
+
+### With tmux Dashboard
 
 ```bash
-MAX_LOOPS=100
-VERIFY_ENABLED=true
-VERIFY_BUILD=true
-VERIFY_SCREENSHOT=true
-VERIFY_CONSOLE=true
-VERIFY_LOGS=false
-DEV_SERVER_URL=http://localhost:3000
+ralph --monitor
+```
 
-# v4 Options
-FLOW_TESTING_ENABLED=true
-DEVTOOLS_LOGS_ENABLED=true
-REPORT_ENABLED=true
-JSON_OUTPUT=false
+Shows:
+- Current task
+- Loop count
+- Verification status
+- Recent logs
+
+### Useful tmux Commands
+
+```bash
+tmux attach -t ralph       # Join session
+Ctrl+B then D              # Detach (leave running)
+Ctrl+C                     # Stop Ralph
+tmux kill-session -t ralph # Kill session
+```
+
+### View Logs
+
+```bash
+tail -f logs/ralph.log            # Real-time logs
+ls logs/screenshots/               # View screenshots
+cat @fix_plan.md                   # Check completed tasks
+cat status.json                    # Detailed status
+git log --oneline -10              # Recent commits
 ```
 
 ## 🎯 Best Practices
@@ -331,7 +236,7 @@ JSON_OUTPUT=false
 - Let it run overnight for big features
 - Keep tasks atomic (1 task = 1 iteration)
 - Include "Build passes" in acceptance criteria
-- Add `testScenarios` for UI features
+- Have dev server running for Playwright verification
 
 ### DON'T ❌
 - Use for critical production bugs (need human diagnosis)
@@ -339,56 +244,109 @@ JSON_OUTPUT=false
 - Use for single small tasks (overhead not worth it)
 - Use for auth/payment code (needs human review)
 
-## 📊 Monitoring
+## 🔧 Interactive Setup
 
-### With tmux Dashboard
-```bash
-ralph-ultimate --monitor
+When you run `ralph-setup`, it asks:
+
+### 1. Project Name
+```
+Project name:
+> my-awesome-project
 ```
 
-Shows:
-- Current task
-- Loop count
-- Verification status
-- Recent logs
+### 2. Project Type
+```
+What type of project?
 
-### JSON Output Mode (for Claude Code)
-```bash
-ralph-ultimate --json-output
+  1) 🌐 Web Site / SaaS (Next.js)
+  2) 📱 Mobile App (Expo)
+  3) 🔌 Chrome Extension
+  4) 🖥️  CLI / Script
+  5) 📦 Other
+
+Choice [1-5]:
 ```
 
-Outputs structured JSON status for background task integration.
+### 3. Tech Stack
+```
+Tech stack?
+  Default: Next.js 16, Convex, Clerk, Stripe, shadcn/ui, Tailwind CSS, Vercel
 
-### View Logs
-```bash
-tail -f ~/.ralph-ultimate/logs/ralph-ultimate.log
+Press Enter for default, or enter custom stack:
 ```
 
-### View DevTools Logs
-```bash
-cat .claude/logs/devtools-*.json | jq .
-```
+### Default Stacks by Type
+
+| Type | Default Stack |
+|------|---------------|
+| **Web/SaaS** | Next.js 16, Convex, Clerk, Stripe, shadcn/ui, Tailwind CSS, Vercel |
+| **Mobile** | Expo, React Native, Convex, Clerk |
+| **Extension** | TypeScript, Chrome Extension API |
+| **CLI** | Node.js or Bash |
 
 ## 🤝 Integration with Claude Code
 
-### Using /ralph Skill (v4)
+### Claude Can Launch Ralph in Background
 
-If you have the `/ralph` skill installed:
+When you ask Claude Code for a feature with multiple tasks, it can:
+
+1. Prepare the files (PROMPT.md, @fix_plan.md, @AGENT.md)
+2. Launch Ralph in background
+3. Give you commands to monitor progress
 
 ```
-/ralph "Add user authentication with Clerk"
-/ralph status
-/ralph verify http://localhost:3000
-/ralph resume
-/ralph report
+Ralph launched in background!
+
+📁 Project: /home/user/my-project
+📋 Tasks: 5 tasks in @fix_plan.md
+
+To monitor progress:
+  tail -f logs/ralph.log
+
+To see screenshots:
+  ls logs/screenshots/
+
+To stop:
+  pkill -f "ralph"
+
+Ralph will work autonomously and stop when done.
 ```
 
-### Background Task Integration
+## 🐛 Troubleshooting
 
-The `/ralph` skill can now launch Ralph as a background task from Claude Code:
-- No need to manually run terminal commands
-- Use `/ralph status` to check progress
-- JSON output mode for structured status
+### Ralph is stuck in a loop
+```bash
+ralph --reset-circuit     # Reset circuit breaker
+```
+
+### See what's happening
+```bash
+ralph --status            # Current state
+cat status.json           # Full details
+ls logs/                  # View iteration logs
+ls logs/screenshots/      # View Playwright screenshots
+```
+
+### Stop Ralph properly
+```bash
+# In tmux terminal:
+Ctrl+C
+
+# From another terminal:
+tmux kill-session -t ralph
+
+# Kill all Ralph processes:
+pkill -f "ralph"
+```
+
+### Ralph stopped due to API limit
+With current config, Ralph waits 65 minutes and resumes automatically.
+No action needed.
+
+### Playwright not taking screenshots
+1. Check dev server is running
+2. Check Playwright is installed: `ls /home/hacker/.x-navigate`
+3. Force port: `ralph --playwright-port 3000`
 
 ## 📝 License
 
@@ -398,7 +356,8 @@ MIT License - Use it, modify it, share it!
 
 Created by [AgentikOS](https://github.com/agentik-os) for the Claude Code ecosystem.
 
-Built on top of:
+Based on concepts from:
+- [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code)
 - [Claude Code](https://claude.ai/code) by Anthropic
 - [Playwright](https://playwright.dev/) for browser automation
 
