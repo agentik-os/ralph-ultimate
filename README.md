@@ -1,49 +1,72 @@
-# Ralph Ultimate 🤖
+# Ralph Ultimate
 
-> Autonomous AI coding loop with **Unlimited Mode** + **Playwright Verification** for Claude Code
+> **Autonomous AI Coding Loop with Unlimited Mode + Playwright Verification for Claude Code**
+
+[![GitHub](https://img.shields.io/github/license/agentik-os/ralph-ultimate)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/agentik-os/ralph-ultimate?style=social)](https://github.com/agentik-os/ralph-ultimate)
 
 **Ralph Ultimate** is a terminal-based autonomous development system that works with Claude Code to execute complex features while you sleep. It runs **without rate limits**, auto-resumes after API limits, and verifies work with Playwright screenshots.
 
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| **Unlimited Mode** | No rate limiting - runs as long as needed |
-| **Auto-Resume** | Automatically resumes after Claude's 5h API limit (waits 65 min) |
-| **Circuit Breaker** | Detects infinite loops, prevents token waste |
-| **Playwright Verification** | Screenshots + console error checks after each loop |
-| **Interactive Setup** | `ralph-setup` for easy project initialization |
-| **tmux Dashboard** | `--monitor` option for visual progress tracking |
-| **Background Launch** | Can be launched by Claude Code in background |
-| **Checkpoints** | Saves state, can resume after crash/reboot |
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- [Claude Code CLI](https://claude.ai/code) installed and authenticated
-- Node.js 18+
-- Playwright installed (`npx playwright install chromium`)
-
-### Installation
-
-```bash
-# Clone the repo
-git clone https://github.com/agentik-os/ralph-ultimate.git ~/.ralph
-
-# Make scripts executable
-chmod +x ~/.ralph/*.sh ~/.ralph/lib/*.sh
-
-# Add to PATH (add to .bashrc/.zshrc)
-export PATH="$HOME/.ralph:$PATH"
-
-# Create symlinks for easy access
-sudo ln -sf ~/.ralph/ralph.sh /usr/local/bin/ralph
-sudo ln -sf ~/.ralph/ralph-setup.sh /usr/local/bin/ralph-setup
-sudo ln -sf ~/.ralph/ralph-monitor.sh /usr/local/bin/ralph-monitor
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  🤖 RALPH works autonomously → You sleep → Wake up to completed features   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Initialize a Project
+---
+
+## Why Ralph Ultimate?
+
+| Problem | Ralph Solution |
+|---------|----------------|
+| Claude stops after 5h API limit | **Auto-resumes** after 65 min wait |
+| Hard to know if code actually works | **Playwright screenshots** after each loop |
+| Gets stuck in infinite loops | **Circuit breaker** detects and stops stagnation |
+| Complex features need many sessions | **Unlimited mode** - runs until done |
+| Difficult to monitor progress | **tmux dashboard** shows real-time status |
+
+---
+
+## One-Line Installation
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agentik-os/ralph-ultimate/main/install.sh | bash
+```
+
+Or clone and install manually:
+
+```bash
+git clone https://github.com/agentik-os/ralph-ultimate.git ~/.ralph
+cd ~/.ralph && ./install.sh
+```
+
+---
+
+## Prerequisites
+
+| Requirement | Version | Required |
+|-------------|---------|----------|
+| [Claude Code CLI](https://claude.ai/code) | Latest | Yes |
+| Node.js | 18+ | Yes |
+| Git | Any | Yes |
+| tmux | Any | Optional (for --monitor) |
+| Playwright | Any | Optional (for screenshots) |
+
+### Install Claude Code CLI
+
+```bash
+# Via npm
+npm install -g @anthropic-ai/claude-code
+
+# Authenticate
+claude login
+```
+
+---
+
+## Quick Start (3 Steps)
+
+### 1. Initialize your project
 
 ```bash
 cd /your/project
@@ -54,99 +77,143 @@ This creates:
 - `PROMPT.md` - Instructions for Claude
 - `@fix_plan.md` - Task list with checkboxes
 - `@AGENT.md` - Build/run/test commands
-- `logs/` - Execution logs and screenshots
 
-## 📖 Usage
+### 2. Edit your tasks
+
+```markdown
+## Tasks
+- [ ] Add user authentication with Clerk
+- [ ] Create dashboard page with charts
+- [ ] Implement payment flow with Stripe
+- [ ] Add unit tests for core functions
+
+## Validation
+- [ ] Build passes
+- [ ] No TypeScript errors
+```
+
+### 3. Launch Ralph
+
+```bash
+# With tmux dashboard (recommended)
+ralph --monitor
+
+# Or without dashboard
+ralph
+```
+
+**That's it!** Ralph will work through each task autonomously.
+
+---
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         RALPH UNLIMITED LOOP                                 │
+│                                                                              │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │  1. Read PROMPT.md (your instructions)                                 │ │
+│  │  2. Read @fix_plan.md (task list)                                      │ │
+│  │  3. Launch Claude Code                                                 │ │
+│  │  4. Claude works on a task                                             │ │
+│  │  5. ✨ Playwright Verification (if dev server active)                  │ │
+│  │     - Screenshot of the app                                            │ │
+│  │     - Check console errors                                             │ │
+│  │  6. Check if done (exit detection)                                     │ │
+│  │  7. If not done → go back to step 3                                    │ │
+│  │  8. If done → STOP                                                     │ │
+│  └────────────────────────────────────────────────────────────────────────┘ │
+│                                                                              │
+│  🔄 Infinite loop until completion                                          │
+│  ⏰ If 5h API limit → wait 65 min → resume automatically                    │
+│  📸 Auto screenshots in logs/screenshots/                                   │
+│  🛡️ Circuit breaker stops infinite loops                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Commands Reference
 
 ### Basic Commands
 
 ```bash
-# Start autonomous loop (recommended with monitor)
-ralph --monitor
-
-# Start without tmux dashboard
-ralph
-
-# Check status
-ralph --status
-
-# Show circuit breaker state
-ralph --circuit-status
-
-# Reset circuit breaker if stuck
-ralph --reset-circuit
+ralph                    # Start autonomous loop
+ralph --monitor          # Start with tmux dashboard
+ralph --status           # Show current status
+ralph --help             # Show help
 ```
 
 ### Options
 
 ```bash
-ralph --prompt FILE       # Use alternate prompt file
-ralph --timeout 30        # Timeout in minutes (default: 15)
-ralph --verbose           # Verbose mode
+ralph --prompt FILE          # Use alternate prompt file
+ralph --timeout 30           # Timeout per loop (default: 15 min)
+ralph --verbose              # Verbose output
 
 # Playwright options
-ralph --no-playwright         # Disable Playwright verification
-ralph --playwright-port 3001  # Specify dev server port
+ralph --no-playwright        # Disable screenshot verification
+ralph --playwright-port 3001 # Specify dev server port
 ```
 
-## 🔄 How It Works
+### Project Setup
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    RALPH UNLIMITED LOOP                      │
-│                                                              │
-│  1. Read PROMPT.md (your instructions)                      │
-│  2. Read @fix_plan.md (task list)                           │
-│  3. Launch Claude Code                                       │
-│  4. Claude works on a task                                   │
-│  5. ✨ Playwright Verification (if dev server active)       │
-│     - Screenshot of the app                                  │
-│     - Check console errors                                   │
-│  6. Check if done (exit detection)                          │
-│  7. If not done → go back to step 3                         │
-│  8. If done → STOP                                           │
-│                                                              │
-│  🔄 Infinite loop until completion                          │
-│  ⏰ If 5h API limit → wait 65 min → resume                  │
-│  📸 Auto screenshots in logs/screenshots/                    │
-└─────────────────────────────────────────────────────────────┘
+```bash
+ralph-setup              # Interactive project setup
+ralph-init               # Quick minimal setup
+ralph-import file.md     # Import requirements from file
 ```
 
-## 📁 Project Structure
+### Circuit Breaker
 
-```
-~/.ralph/
-├── ralph.sh              # Main loop script (unlimited mode)
-├── ralph-setup.sh        # Interactive project setup
-├── ralph-monitor.sh      # tmux dashboard
-├── ralph-import.sh       # Import requirements
-├── lib/
-│   ├── circuit_breaker.sh   # Infinite loop protection
-│   ├── date_utils.sh        # Date utilities
-│   ├── response_analyzer.sh # Response analysis
-│   └── playwright_verify.sh # Playwright verification
-└── templates/            # Project templates
+```bash
+ralph --circuit-status   # Show circuit breaker state
+ralph --reset-circuit    # Reset if stuck
 ```
 
-### Project Files Created by ralph-setup
+---
+
+## Project Structure
+
+When you run `ralph-setup`, it creates:
 
 ```
 your-project/
 ├── PROMPT.md          # 📋 Instructions for Claude (objective, context)
-├── @fix_plan.md       # ✅ Task list with checkboxes
+├── @fix_plan.md       # ✅ Task list with checkboxes [ ] / [x]
 ├── @AGENT.md          # 🔧 Build/run/test commands
-├── status.json        # 📊 Current state (generated by Ralph)
+├── status.json        # 📊 Current state (auto-generated)
 └── logs/
     ├── ralph.log      # 📝 Execution logs
     └── screenshots/   # 📸 Playwright screenshots
 ```
 
-## 🔧 Configuration
+Ralph reads from `~/.ralph/`:
 
-### Default Settings (Unlimited Mode)
+```
+~/.ralph/
+├── ralph.sh              # Main loop script
+├── ralph-setup.sh        # Interactive setup
+├── ralph-monitor.sh      # tmux dashboard
+├── ralph-init.sh         # Quick init
+├── ralph-import.sh       # Import requirements
+└── lib/
+    ├── circuit_breaker.sh   # Infinite loop protection
+    ├── date_utils.sh        # Date utilities
+    ├── response_analyzer.sh # Response analysis
+    ├── playwright_verify.sh # Screenshot verification
+    └── auto_refactor.sh     # Large file splitting
+```
+
+---
+
+## Configuration
+
+### Default Settings
 
 ```bash
-# No rate limiting
+# No rate limiting (unlimited mode)
 RATE_LIMIT_ENABLED=false
 MAX_CALLS_PER_HOUR=999999999
 
@@ -154,213 +221,327 @@ MAX_CALLS_PER_HOUR=999999999
 AUTO_RESUME_ON_5H_LIMIT=true
 API_LIMIT_WAIT_MINUTES=65
 
-# Playwright verification enabled
+# Playwright verification
 PLAYWRIGHT_ENABLED=true
-PLAYWRIGHT_DEV_PORTS="3000 3001 5173 8080 22001 22002 33001"
+PLAYWRIGHT_DEV_PORTS="3000 3001 5173 8080"
 ```
 
-### Customization
+### Custom Configuration
 
-Create `.ralph-config` in your project to override defaults:
+Create `.ralph-config` in your project to override:
 
 ```bash
+# .ralph-config
 CLAUDE_TIMEOUT_MINUTES=20     # Claude timeout per loop
 VERBOSE_PROGRESS=true         # Verbose output
-PLAYWRIGHT_ENABLED=false      # Disable Playwright
+PLAYWRIGHT_ENABLED=false      # Disable screenshots
+PLAYWRIGHT_DEV_PORTS="3001"   # Custom dev port
 ```
 
-## 🛡️ Safety Features
+---
+
+## Task File Formats
+
+Ralph supports 3 task file formats:
+
+### 1. @fix_plan.md (Recommended)
+
+Simple markdown checklist:
+
+```markdown
+## Tasks
+- [ ] Add login page
+- [ ] Create user dashboard
+- [ ] Implement API endpoints
+
+## Validation
+- [ ] Build passes
+- [ ] Tests pass
+```
+
+### 2. prd.json (Structured)
+
+JSON with user stories:
+
+```json
+{
+  "project": "my-app",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "User Login",
+      "description": "As a user, I want to log in",
+      "acceptanceCriteria": ["Email/password form", "Build passes"],
+      "priority": 1,
+      "passes": false
+    }
+  ]
+}
+```
+
+### 3. .claude/step.json (Claude Code format)
+
+```json
+{
+  "project": "my-app",
+  "steps": [
+    {
+      "id": 1,
+      "name": "Authentication",
+      "tasks": [
+        {"name": "Add login", "done": false}
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Playwright Verification
+
+After each loop, Ralph automatically:
+
+1. **Detects** running dev server (ports: 3000, 3001, 5173, 8080)
+2. **Takes screenshot** of the app
+3. **Checks** for JavaScript console errors
+4. **Logs** results
+
+Screenshots saved as: `logs/screenshots/loop_5_20260112_143025.png`
+
+### Manual Screenshot Setup
+
+```bash
+# Install Playwright
+npx playwright install chromium
+
+# Test it works
+npx playwright screenshot https://localhost:3000 test.png
+```
+
+---
+
+## Monitoring
+
+### tmux Dashboard
+
+```bash
+ralph --monitor
+```
+
+Shows split view:
+- Left: Ralph execution
+- Right: Real-time monitor
+
+**tmux commands:**
+```
+Ctrl+B then D         # Detach (leave running)
+tmux attach -t ralph  # Reattach
+Ctrl+C                # Stop Ralph
+tmux kill-session     # Kill everything
+```
+
+### View Logs
+
+```bash
+tail -f logs/ralph.log        # Real-time logs
+ls logs/screenshots/          # View screenshots
+cat @fix_plan.md              # Check completed tasks
+cat status.json               # Detailed status
+git log --oneline -10         # Recent commits
+```
+
+---
+
+## Safety Features
 
 ### Circuit Breaker
 
-Detects when Ralph is stuck in a loop and stops automatically:
-- Max consecutive failures detection
-- Token usage monitoring
-- Time-based limits
+Detects when Ralph is stuck and stops automatically:
+- Too many consecutive failures
+- No progress after X loops
+- Repeated same errors
 
 ```bash
-# Check circuit breaker status
+# Check status
 ralph --circuit-status
 
 # Reset if stuck
 ralph --reset-circuit
 ```
 
-### Playwright Verification
+### Auto-Refactoring
 
-After each loop, Ralph:
-1. Detects running dev server (ports: 3000, 3001, 5173, 8080, 22001, 22002, 33001)
-2. Takes a screenshot
-3. Checks for JavaScript console errors
-4. Logs the result
+If Claude encounters "max tokens" error, Ralph:
+1. Detects the oversized file
+2. Queues it for splitting
+3. Creates smaller focused files
+4. Continues with the task
 
-Screenshots saved as: `logs/screenshots/loop_5_20260112_143025.png`
+---
 
-## 📊 Monitoring
+## Best Practices
 
-### With tmux Dashboard
+### DO
 
-```bash
-ralph --monitor
-```
-
-Shows:
-- Current task
-- Loop count
-- Verification status
-- Recent logs
-
-### Useful tmux Commands
-
-```bash
-tmux attach -t ralph       # Join session
-Ctrl+B then D              # Detach (leave running)
-Ctrl+C                     # Stop Ralph
-tmux kill-session -t ralph # Kill session
-```
-
-### View Logs
-
-```bash
-tail -f logs/ralph.log            # Real-time logs
-ls logs/screenshots/               # View screenshots
-cat @fix_plan.md                   # Check completed tasks
-cat status.json                    # Detailed status
-git log --oneline -10              # Recent commits
-```
-
-## 🎯 Best Practices
-
-### DO ✅
 - Use for features with 3+ tasks
 - Let it run overnight for big features
 - Keep tasks atomic (1 task = 1 iteration)
 - Include "Build passes" in acceptance criteria
 - Have dev server running for Playwright verification
+- Review commits in the morning
 
-### DON'T ❌
+### DON'T
+
 - Use for critical production bugs (need human diagnosis)
 - Use for architecture decisions (need human validation)
 - Use for single small tasks (overhead not worth it)
-- Use for auth/payment code (needs human review)
+- Skip reviewing Ralph's work before deploying
 
-## 🔧 Interactive Setup
+---
 
-When you run `ralph-setup`, it asks:
+## Troubleshooting
 
-### 1. Project Name
+### Ralph won't start
+
+```bash
+# Check Claude Code is installed
+claude --version
+
+# Check you're in a project directory
+ls PROMPT.md @fix_plan.md
+
+# Initialize if missing
+ralph-setup
 ```
-Project name:
-> my-awesome-project
-```
-
-### 2. Project Type
-```
-What type of project?
-
-  1) 🌐 Web Site / SaaS (Next.js)
-  2) 📱 Mobile App (Expo)
-  3) 🔌 Chrome Extension
-  4) 🖥️  CLI / Script
-  5) 📦 Other
-
-Choice [1-5]:
-```
-
-### 3. Tech Stack
-```
-Tech stack?
-  Default: Next.js 16, Convex, Clerk, Stripe, shadcn/ui, Tailwind CSS, Vercel
-
-Press Enter for default, or enter custom stack:
-```
-
-### Default Stacks by Type
-
-| Type | Default Stack |
-|------|---------------|
-| **Web/SaaS** | Next.js 16, Convex, Clerk, Stripe, shadcn/ui, Tailwind CSS, Vercel |
-| **Mobile** | Expo, React Native, Convex, Clerk |
-| **Extension** | TypeScript, Chrome Extension API |
-| **CLI** | Node.js or Bash |
-
-## 🤝 Integration with Claude Code
-
-### Claude Can Launch Ralph in Background
-
-When you ask Claude Code for a feature with multiple tasks, it can:
-
-1. Prepare the files (PROMPT.md, @fix_plan.md, @AGENT.md)
-2. Launch Ralph in background
-3. Give you commands to monitor progress
-
-```
-Ralph launched in background!
-
-📁 Project: /home/user/my-project
-📋 Tasks: 5 tasks in @fix_plan.md
-
-To monitor progress:
-  tail -f logs/ralph.log
-
-To see screenshots:
-  ls logs/screenshots/
-
-To stop:
-  pkill -f "ralph"
-
-Ralph will work autonomously and stop when done.
-```
-
-## 🐛 Troubleshooting
 
 ### Ralph is stuck in a loop
+
 ```bash
-ralph --reset-circuit     # Reset circuit breaker
+# Check circuit breaker
+ralph --circuit-status
+
+# Reset it
+ralph --reset-circuit
+
+# Check what's happening
+cat logs/ralph.log | tail -50
 ```
 
-### See what's happening
-```bash
-ralph --status            # Current state
-cat status.json           # Full details
-ls logs/                  # View iteration logs
-ls logs/screenshots/      # View Playwright screenshots
+### API limit reached
+
+Ralph auto-resumes after 65 minutes. If you see:
+```
+Claude API 5-hour limit reached
+AUTO-RESUME: Waiting 65 minutes...
 ```
 
-### Stop Ralph properly
+Just wait. Ralph will continue automatically.
+
+### Playwright not working
+
 ```bash
-# In tmux terminal:
-Ctrl+C
+# Check dev server is running
+curl http://localhost:3000
 
-# From another terminal:
-tmux kill-session -t ralph
+# Install Playwright
+npx playwright install chromium
 
-# Kill all Ralph processes:
-pkill -f "ralph"
+# Force specific port
+ralph --playwright-port 3000
 ```
 
-### Ralph stopped due to API limit
-With current config, Ralph waits 65 minutes and resumes automatically.
-No action needed.
+### Commands not found
 
-### Playwright not taking screenshots
-1. Check dev server is running
-2. Check Playwright is installed: `ls /home/hacker/.x-navigate`
-3. Force port: `ralph --playwright-port 3000`
+```bash
+# Source your shell config
+source ~/.bashrc  # or ~/.zshrc
 
-## 📝 License
+# Or add to PATH manually
+export PATH="$HOME/.ralph:$PATH"
+```
 
-MIT License - Use it, modify it, share it!
+---
 
-## 🙏 Credits
+## Integration with Claude Code
+
+Claude Code can launch Ralph directly! When you ask for a complex feature:
+
+1. Claude prepares the task files (PROMPT.md, @fix_plan.md)
+2. Claude launches Ralph in background
+3. You monitor progress or go to sleep
+4. Wake up to completed features
+
+Example prompt to Claude:
+> "Create a user dashboard with charts and authentication. Use Ralph to implement it autonomously."
+
+---
+
+## Updating Ralph
+
+```bash
+cd ~/.ralph
+git pull origin main
+chmod +x *.sh lib/*.sh
+```
+
+Or reinstall:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agentik-os/ralph-ultimate/main/install.sh | bash
+```
+
+---
+
+## Uninstall
+
+```bash
+# Remove installation
+rm -rf ~/.ralph
+
+# Remove symlinks
+sudo rm -f /usr/local/bin/ralph*
+
+# Remove from shell config (edit manually)
+# Remove lines containing RALPH_HOME from ~/.bashrc or ~/.zshrc
+```
+
+---
+
+## Contributing
+
+Contributions welcome! Please:
+
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Test with `ralph --help` and `ralph-setup`
+5. Submit a PR
+
+---
+
+## Credits
 
 Created by [AgentikOS](https://github.com/agentik-os) for the Claude Code ecosystem.
 
 Based on concepts from:
-- [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code)
+- [frankbria/ralph-claude-code](https://github.com/frankbria/ralph-claude-code) - Original Ralph concept
 - [Claude Code](https://claude.ai/code) by Anthropic
 - [Playwright](https://playwright.dev/) for browser automation
 
 ---
 
-**⭐ Star this repo if Ralph helps you code while you sleep!**
+## License
+
+MIT License - Use it, modify it, share it!
+
+---
+
+## Support
+
+- **GitHub Issues**: [Report bugs or request features](https://github.com/agentik-os/ralph-ultimate/issues)
+- **Discussions**: [Ask questions](https://github.com/agentik-os/ralph-ultimate/discussions)
+
+---
+
+**Star this repo if Ralph helps you code while you sleep!**
