@@ -418,6 +418,37 @@ main() {
     log_status "INFO" "Auto-resume on 5h limit: ENABLED ($API_LIMIT_WAIT_MINUTES minutes)"
     log_status "INFO" "Logs: $LOG_DIR/ | Status: $STATUS_FILE"
 
+    # Auto-detect prompt file (case-insensitive)
+    if [[ ! -f "$PROMPT_FILE" ]]; then
+        # Try common variations
+        for alt_prompt in "prompt.md" "Prompt.md" "PROMPT.MD"; do
+            if [[ -f "$alt_prompt" ]]; then
+                log_status "INFO" "Found '$alt_prompt' instead of '$PROMPT_FILE', using it"
+                PROMPT_FILE="$alt_prompt"
+                break
+            fi
+        done
+    fi
+
+    # Also check for prd.json as alternative task source
+    if [[ ! -f "$PROMPT_FILE" ]] && [[ -f "prd.json" ]]; then
+        log_status "INFO" "No PROMPT.md found, but prd.json exists. Creating PROMPT.md from template..."
+        cat > PROMPT.md << 'AUTOPROMPT'
+Complete the tasks in prd.json one at a time.
+
+For each user story:
+1. Read the user story and acceptance criteria
+2. Implement the required changes
+3. Verify with: npm run build (or appropriate build command)
+4. Mark the user story as passes: true in prd.json
+5. Move to the next user story
+
+When all user stories pass, say "ALL TASKS COMPLETE".
+AUTOPROMPT
+        PROMPT_FILE="PROMPT.md"
+        log_status "SUCCESS" "Auto-generated PROMPT.md"
+    fi
+
     if [[ ! -f "$PROMPT_FILE" ]]; then
         log_status "ERROR" "Prompt file '$PROMPT_FILE' not found!"
         echo ""
@@ -428,6 +459,7 @@ main() {
         echo "  2. Import requirements: ralph-import requirements.md"
         echo "  3. Navigate to an existing Ralph project"
         echo "  4. Or create PROMPT.md manually"
+        echo "  5. Or create prd.json (Ralph will auto-generate PROMPT.md)"
         exit 1
     fi
 
